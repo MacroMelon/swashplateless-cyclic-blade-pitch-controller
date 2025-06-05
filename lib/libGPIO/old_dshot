@@ -1,0 +1,152 @@
+void Dshot_enableConfigureTimer()
+{
+	//DMA - TIM3_CH1 is Stream 4 channel 5 of DMA1
+
+
+	//TODO- migrate to TIM10 or higher for that good 168Mhz clock- then psc to 6 and 20bits for dshot 1200
+	//can even go to dshot2400, psc 3, arr 20
+	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;			//enable clock to TIM3
+	TIM3->CR1 = 0;								//reset CR just in case
+
+	//GPIO configure PC6 for output Push Pull AF2 (TIM3_CH1)
+	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;		//enable clock to GPIOC
+
+	GPIOC->AFR[0] &= ~(GPIO_AFRL_AFSEL6);
+	GPIOC->AFR[0] |= (2<< GPIO_AFRL_AFSEL6_Pos);	//enable TIM3_CH1 to PC6
+	GPIOC->MODER &= ~(GPIO_MODER_MODE6);
+	GPIOC->MODER |= GPIO_MODER_MODE6_1;				//MODER5[1:0] = 10 bin, Alternate function
+	GPIOC->OSPEEDR &= ~(GPIO_OSPEEDER_OSPEEDR6);	//clear
+	GPIOC->OSPEEDR |= GPIO_OSPEEDER_OSPEEDR6_1;		// 10b, 50Mhz speed, plenty
+
+	TIM3->CCMR1 |= TIM_CCMR1_OC1PE;		//enable preload for CCR1
+	TIM3->CCMR1 &= ~(TIM_CCMR1_OC1M);	//clear
+	TIM3->CCMR1 |= TIM_CCMR1_OC1M_1;	//enable pwm mode 1 (OC1M to 110b)
+	TIM3->CCMR1 |= TIM_CCMR1_OC1M_2;	//enable pwm mode 1 (OC1M to 110b)
+	TIM3->CCER |= TIM_CCER_CC1E;		//Enable relevant channel output and polarity from CCER
+	TIM3->BDTR |= TIM_BDTR_MOE;			//Enable Master output from BDTR register
+
+	TIM3->CR1 |= TIM_CR1_ARPE;			//enable preload for ARR
+	//set upcounting mode - by default
+	TIM3->CR1 |= TIM_CR1_URS;			//only interrupt at counter overflow
+	TIM3->DIER |= TIM_DIER_UIE;			//enable Update event interrupt
+
+	//Heres the plan: 8 counts, high for 3 for bit 0, high for 6 for bit 1
+	//Timer clock is 2*ABP domain clock if ABP != 1
+	//So, for 1.2Mbits / sec, we need a prescaler of (from 84Mhz):
+	//84/(1.2*num clicks per bit)
+	//so if we take num clicks as 14, (84/(1.2*14)) = 5
+
+	//(84000000 / 1200000) - 1
+	//dont ask
+	TIM3->PSC = 4;					//set prescaler - 4 + 1 = 5
+	TIM3->ARR = 14;						//set Auto reload reg to get frequency of 1.2Mhz
+
+	//TIM3->PSC = 24;						//set prescaler - 6 + 1 = 7
+	//TIM3->ARR = 20;						//set Auto reload reg to get frequency of 0.6Mhz
+
+	NVIC_SetPriority (TIM3_IRQn, 0);            // Set Timer priority
+	NVIC_EnableIRQ (TIM3_IRQn);                 // Enable Timer Interrupt
+
+	//TIM3->CR1 |= TIM_CR1_UDIS;				//halt update event interrupts
+
+	TIM3->CCR1 = 0;							//send the pin low
+
+	//blank frames to send signal low for a while in continous mode
+	safe_packet_data[16] = 0;
+	safe_packet_data[17] = 0;
+	safe_packet_data[18] = 0;
+	counter = 0;
+
+	//TIM3->CR1 |= TIM_CR1_UDIS;				//halt update event interrupts
+	TIM3->CR1 &= ~(TIM_CR1_UDIS);		//begin update events
+
+	//TIM3->EGR |= TIM_EGR_UG;			//re-init counter etc before starting
+	TIM3->CR1 |= TIM_CR1_CEN;			//enable clock
+}
+
+//TODO- DMA
+//TODO- double buffered continous send with circular counter, last 3 bytes of packet data is zero
+void DshotStartWrite(uint16_t throttle)
+{
+	//pg 374 of ref manual
+    /*
+	 * Right, so for DShot, we want DShot1200 because why not.
+	 * SO Thats 1,200,000 Dshot-bits/sec (1.2Mhz). -> timer + counter frequency
+     * count to 8? check with divisors n stuff
+     *
+     * so heres the plan:
+     * have a flag to set when writing to halt processor, clear when done and proceed
+     * use __wfi() (wait for interrupt)
+     * set timer ARR to bit length
+     * have a counter to keep track of bit number (maybe TIMx_RCR (repetition counter?)
+     * update event interrupt load next CCR1 vlaue (preload eneabled so it should work)
+     * on every interrupt:
+     * set CCR to appropriate value based on bit number counter
+     * if counter = 16, next bit zero, CCRx to zero, disable CEN?
+     * TODO - use DMA for all this
+
+	 As the preload registers are transferred to the shadow registers only when an update event
+	occurs, before starting the counter, you have to initialize all the registers by setting the UG
+	bit in the TIMx_EGR register
+	*/
+	Dshot_preparePacketData(Dshot_build_packet(throttle));
+
+	if (transferDone == 1){
+		transferDone = 0;					//starting tranfer, set flag
+		//double buffered, incase tranfser is ongoing while we prepare packet
+		memcpy(&scary_packet_data, &safe_packet_data, 16);	//no need last byte, always zero
+
+		//blank frames to send signal low for a while in continous mode
+		//TODO- set blank frames once and forget
+		scary_packet_data[16] = 0;
+		scary_packet_data[17] = 0;
+		scary_packet_data[18] = 0;
+		counter = 0;
+		TIM3->CCR1 = scary_packet_data[counter];	//write first thingy to CCR
+		counter++;
+		TIM3->CR1 &= ~(TIM_CR1_UDIS);		//begin update events
+	}
+}
+
+void TIM3_IRQHandler (void)
+{
+	//TODO- maybe get rid of CCR2 and update everything using CCR1... yeah with DMA no need extra timing
+	if (TIM3->SR & TIM_SR_UIF){
+		if (counter <= 16){				//data + 2 zero bits
+			//load CCR1 value for next bit
+			TIM3->CCR1 = safe_packet_data[counter];
+			counter++;
+		}
+		else{
+			//TIM3->CCR1 = 0;							//send the pin low
+			//TIM3->CR1 |= TIM_CR1_UDIS;				//halt update event interrupts
+			//transferDone = 1;
+			TIM3->CR1 |= TIM_CR1_UDIS;				//halt update event interrupts
+			counter = 0;
+			//todo- this is a bit mad
+			Dshot_preparePacketData(Dshot_build_packet(esc_value));
+			TIM3->CR1 &= ~(TIM_CR1_UDIS);		//begin update events
+		}
+		TIM3->SR &= ~(TIM_SR_UIF);	//clear flag
+	}
+}
+
+/*
+void TIM3_IRQHandler (void)
+{
+	//TODO- maybe get rid of CCR2 and update everything using CCR1... yeah with DMA no need extra timing
+	if (TIM3->SR & TIM_SR_UIF){
+		if (counter <= 18){				//data + 2 zero bits
+			//load CCR1 value for next bit
+			TIM3->CCR1 = scary_packet_data[counter];
+			counter++;
+		}
+		else{
+			//TIM3->CCR1 = 0;							//send the pin low
+			TIM3->CR1 |= TIM_CR1_UDIS;				//halt update event interrupts
+			transferDone = 1;
+		}
+		TIM3->SR &= ~(TIM_SR_UIF);	//clear flag
+	}
+}
+*/

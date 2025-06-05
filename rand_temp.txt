@@ -1,0 +1,90 @@
+//debugging in amin loop
+
+	/*//debugging stuff
+	if (motor_angle >= 180){
+		GPIOC->ODR |= (1<<1);		//turn on ye olde debug LED
+	}
+	else{
+		GPIOC->ODR &= ~(1<<1);		//turn on ye olde debug LED
+	}*/
+	/*
+	if (scaler >= 200){
+		GPIOC->ODR |= (1<<1);		//turn on ye olde debug LED
+	}
+	else{
+		GPIOC->ODR &= ~(1<<1);		//turn on ye olde debug LED
+	}*/
+
+
+
+//ms_delay(10000);
+
+	/*
+	//test
+	esc_value = 0; 	//arm esc
+	int i = 0;
+	while(i<10000){
+		if(!(DMA2_Stream1->CR & DMA_SxCR_EN)){	//check if prev transfer is complete
+			//new packet time
+			//GPIOC->ODR ^= (1<<1);
+			Dshot_preparePacketData(Dshot_build_packet(esc_value));
+			DMA2->LIFCR |= DMA_LIFCR_CTCIF1;		//clear transfer complete flag
+			DMA2_Stream1->CR |= DMA_SxCR_EN;
+		}
+		i++;
+		WaitForTick();
+	}
+	i = 0;
+	esc_value = 200;
+	while(i<100000){
+		if(!(DMA2_Stream1->CR & DMA_SxCR_EN)){	//check if prev transfer is complete
+			//new packet time
+			//GPIOC->ODR ^= (1<<1);
+			Dshot_preparePacketData(Dshot_build_packet(esc_value));
+			DMA2->LIFCR |= DMA_LIFCR_CTCIF1;		//clear transfer complete flag
+			DMA2_Stream1->CR |= DMA_SxCR_EN;
+		}
+		i++;
+		WaitForTick();
+	}
+	esc_value = 500;
+	i = 0;
+	while(i<100000){
+		if(!(DMA2_Stream1->CR & DMA_SxCR_EN)){	//check if prev transfer is complete
+			//new packet time
+			//GPIOC->ODR ^= (1<<1);
+			Dshot_preparePacketData(Dshot_build_packet(esc_value));
+			DMA2->LIFCR |= DMA_LIFCR_CTCIF1;		//clear transfer complete flag
+			DMA2_Stream1->CR |= DMA_SxCR_EN;
+		}
+		i++;
+		WaitForTick();
+	}
+	esc_value = 500;
+	i = 0;
+	while(i<100000){
+		if(!(DMA2_Stream1->CR & DMA_SxCR_EN)){	//check if prev transfer is complete
+			//new packet time
+			//GPIOC->ODR ^= (1<<1);
+			Dshot_preparePacketData(Dshot_build_packet(esc_value));
+			DMA2->LIFCR |= DMA_LIFCR_CTCIF1;		//clear transfer complete flag
+			DMA2_Stream1->CR |= DMA_SxCR_EN;
+		}
+		i++;
+		WaitForTick();
+	}
+	*/
+
+	/*
+	//more test
+	ms_delay(100000);
+	esc_value = 200;
+	ms_delay(100000);
+	esc_value = 500;
+	ms_delay(100000);
+	esc_value = 700;
+	*/
+
+	//DshotWrite(0);
+
+	//esc_value = 700;
