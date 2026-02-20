@@ -120,6 +120,7 @@ void Dshot_enableConfigureTimer()
 	DMA2_Stream1->NDTR = 18;			//number of data items to be transferred
 	//DMA2_Stream1->NDTR = 40;			//number of data items to be transferred
 
+	//use cast here
 	DMA2_Stream1->PAR = &(TIM8->CCR1);				//Peripheral address of transfer
 	DMA2_Stream1->M0AR = &(safe_packet_data);		//memory address of transfer
 
