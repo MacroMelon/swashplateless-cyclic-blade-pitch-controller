@@ -12,7 +12,6 @@ void GPIOinit();
 volatile uint_fast8_t transferDone;
 volatile uint16_t esc_value;			//only needed in continous mode
 
-//does this not need to be marked volatile?
 uint16_t safe_packet_data[40];		//with last value zero to send pin low
 
 uint16_t Dshot_build_packet(uint16_t throttle);
