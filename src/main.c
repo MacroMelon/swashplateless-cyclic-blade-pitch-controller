@@ -5,11 +5,12 @@
 #include "libAS5047P.h"
 #include "libI2C.h"
 
-//#define MOT1
-#define MOT2
+#define MOT1
+//#define MOT2
 
 #ifdef MOT1
-#define OFFSET 9016		//angle at zero:
+//#define OFFSET 9016		//angle at zero:
+#define OFFSET 0		//angle at zero - for the thrust testing thingy
 #define I2CADDR 0x28
 #endif
 
