@@ -95,8 +95,7 @@ void loop()
 	motor_angle = (getDECAngle() + OFFSET) / 45.5111111111;
 
 	//TODO- looks like sin is too slow, use fast sin
-	//ah yes, the creme de la creme of the system
-	//TODO- Use cos
+	//TODO- Use cos??
 	calculated_esc_value = throttle_val + (sin((angle + motor_angle) * (3.14159265359/180)) * scaler);	//TODO- sin or cos??
 
 	if (((calculated_esc_value >= 48) && (calculated_esc_value <= 2047)) || (calculated_esc_value == 0)){
