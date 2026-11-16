@@ -1,6 +1,6 @@
-# Firmware for a swashplateless cyclic blade pitch controller
+# STM32F4 Firmware for a swashplateless cyclic blade pitch controller
 
-This firmware generates a Dshot2400 throttle signal with an appropirate sine wave component given the following input parameters (via i2c packets): base throttle, angle offset and scaler (see image below) 
+This STM32F4 firmware generates a Dshot2400 throttle signal with an appropirate sine wave component given the following input parameters (via i2c packets): base throttle, angle offset and scaler (see image below) 
 
 ![](https://github.com/MacroMelon/swashplateless-cyclic-blade-pitch-controller/blob/master/throttle_explanation.png)
 
